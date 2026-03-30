@@ -1,0 +1,421 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: assignments
+    // Document ID: {assignmentId}
+    // Fields:
+    //   - id: string (required)
+    //   - courseId: string (optional)
+    //   - title: string (required, < 100)
+    //   - description: string (required, < 1000)
+    //   - dueDate: number (required)
+    //   - createdAt: number (required)
+    //
+    // Collection: codePersistence
+    // Document ID: {userId}
+    // Fields:
+    //   - files: array (required, < 50 items)
+    //   - updatedAt: number (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+       return request.auth != null;
+    }
+
+    function isOwner(userId) {
+       return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "faithjohnjackson@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isMentorOrAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'mentor'] ||
+          (request.auth.token.email == "faithjohnjackson@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isSameCohort(targetUser) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.cohortId == targetUser.cohortId;
+    }
+
+    function isValidArticle(data) {
+      return data.keys().hasAll(['id', 'title', 'slug', 'content', 'excerpt', 'category', 'authorId', 'publishedAt', 'isPublished']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.content is string && data.content.size() < 50000 &&
+             data.category is string;
+    }
+
+    function isValidResource(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'url', 'category', 'addedBy', 'addedAt']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.url is string && data.url.size() < 500;
+    }
+
+    function isValidAssignment(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'dueDate', 'createdAt']) &&
+             data.title is string && data.title.size() < 100 &&
+             data.description is string && data.description.size() < 1000 &&
+             data.dueDate is number &&
+             data.createdAt is number;
+    }
+
+    function isValidCodePersistence(data) {
+      return data.keys().hasAll(['files', 'updatedAt']) &&
+             data.files is list && data.files.size() < 50 &&
+             data.updatedAt is number;
+    }
+
+    function isValidPortfolioProject(data) {
+      return data.keys().hasAll(['id', 'studentId', 'title', 'description', 'createdAt']) &&
+             data.title is string && data.title.size() < 100 &&
+             data.description is string && data.description.size() < 1000 &&
+             data.studentId == request.auth.uid;
+    }
+
+    function isValidQuiz(data) {
+      return data.keys().hasAll(['id', 'title', 'questions', 'createdAt']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.questions is list && data.questions.size() < 50;
+    }
+
+    function isValidQuizAttempt(data) {
+      return data.keys().hasAll(['id', 'quizId', 'studentId', 'answers', 'score', 'completedAt']) &&
+             data.studentId == request.auth.uid &&
+             data.score is number && data.score >= 0;
+    }
+
+    function isValidSubmission(data) {
+      return data.keys().hasAll(['id', 'assignmentId', 'studentId', 'studentName', 'studentPhoto', 'cohortId', 'content', 'status', 'submittedAt']) &&
+             data.studentId == request.auth.uid &&
+             data.status in ['pending', 'reviewed', 'resubmit'] &&
+             (data.isFeatured == null || data.isFeatured is bool);
+    }
+
+    function isValidBadge(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'imageUrl']) &&
+             data.title is string && data.title.size() < 100 &&
+             (data.criteria == null || data.criteria is string);
+    }
+
+    function isValidUserBadge(data) {
+      return data.keys().hasAll(['id', 'userId', 'badgeId', 'earnedAt']) &&
+             data.userId is string &&
+             data.badgeId is string;
+    }
+
+    function isValidCertificate(data) {
+      return data.keys().hasAll(['id', 'userId', 'courseId', 'issuedAt']) &&
+             data.userId is string &&
+             data.courseId is string &&
+             (data.certificateUrl == null || data.certificateUrl is string);
+    }
+
+    function isValidCohort(data) {
+      return data.keys().hasAll(['id', 'name', 'startDate', 'endDate', 'mentorIds', 'active', 'studentCount']) &&
+             data.name is string && data.name.size() < 100 &&
+             data.mentorIds is list;
+    }
+
+    function isValidCourse(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'thumbnail', 'createdAt']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.description is string && data.description.size() < 2000;
+    }
+
+    function isValidModule(data) {
+      return data.keys().hasAll(['id', 'courseId', 'title', 'order']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.order is number;
+    }
+
+    function isValidLesson(data) {
+      return data.keys().hasAll(['id', 'courseId', 'moduleId', 'title', 'videoUrl', 'content', 'order']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.videoUrl is string &&
+             data.content is string &&
+             data.order is number;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'displayName', 'createdAt']) &&
+             data.uid is string && data.uid.size() < 128 &&
+             data.email is string && data.email.size() < 256 &&
+             data.role in ['student', 'mentor', 'admin'] &&
+             data.displayName is string && data.displayName.size() < 100 &&
+             data.createdAt is number &&
+             (data.visibility == null || data.visibility in ['public', 'private', 'cohort_only']) &&
+             (data.location == null || (data.location is string && data.location.size() < 100)) &&
+             (data.skills == null || (data.skills is list && data.skills.size() < 50)) &&
+             (data.bio == null || (data.bio is string && data.bio.size() < 1000));
+    }
+
+    function isValidPublicProfile(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'photoURL', 'role', 'cohortId', 'visibility', 'xp', 'level', 'completedCount', 'createdAt']) &&
+             data.uid is string && data.uid.size() < 128 &&
+             data.displayName is string && data.displayName.size() < 100 &&
+             data.photoURL is string && data.photoURL.size() < 500 &&
+             data.role in ['student', 'mentor', 'admin'] &&
+             data.visibility in ['public', 'private', 'cohort_only'] &&
+             data.xp is number &&
+             data.level is number &&
+             data.completedCount is number &&
+             data.createdAt is number &&
+             (data.cohortId == null || data.cohortId is string) &&
+             (data.bio == null || (data.bio is string && data.bio.size() < 1000)) &&
+             (data.githubUrl == null || (data.githubUrl is string && data.githubUrl.size() < 500)) &&
+             (data.linkedinUrl == null || (data.linkedinUrl is string && data.linkedinUrl.size() < 500)) &&
+             (data.websiteUrl == null || (data.websiteUrl is string && data.websiteUrl.size() < 500));
+    }
+
+    function isValidProgressUpdate(data) {
+      return data.keys().hasAll(['id', 'studentId', 'lessonId', 'status', 'updatedAt']) &&
+             data.studentId == request.auth.uid &&
+             data.status == 'completed' &&
+             data.updatedAt is number &&
+             (data.lessonTitle == null || (data.lessonTitle is string && data.lessonTitle.size() < 200));
+    }
+
+    function isValidXPHistory(data) {
+      return data.keys().hasAll(['id', 'userId', 'amount', 'reason', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.amount is number &&
+             data.reason is string && data.reason.size() < 200 &&
+             data.timestamp is number;
+    }
+
+    function isValidJob(data) {
+      return data.keys().hasAll(['id', 'title', 'company', 'location', 'type', 'description', 'applyUrl', 'category', 'postedAt']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.company is string && data.company.size() < 200 &&
+             data.type in ['Full-time', 'Part-time', 'Internship', 'Contract'] &&
+             data.applyUrl is string && data.applyUrl.size() < 500 &&
+             data.description is string && data.description.size() < 5000;
+    }
+
+    function isValidCareerResource(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'type', 'url', 'category', 'postedAt']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.type in ['Article', 'Video', 'Tool', 'Template'] &&
+             data.url is string && data.url.size() < 500 &&
+             data.description is string && data.description.size() < 2000;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /assignments/{assignmentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidAssignment(request.resource.data);
+      allow update: if isAdmin() && isValidAssignment(request.resource.data) && 
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+    }
+
+    match /codePersistence/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && isValidCodePersistence(request.resource.data);
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']));
+      allow delete: if isAdmin();
+    }
+
+    match /forumThreads/{threadId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.authorId == request.auth.uid;
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.authorId || isAdmin());
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.authorId || isAdmin());
+
+      match /replies/{replyId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && request.resource.data.authorId == request.auth.uid;
+        allow update: if isAuthenticated() && (request.auth.uid == resource.data.authorId || isAdmin());
+        allow delete: if isAuthenticated() && (request.auth.uid == resource.data.authorId || isAdmin());
+      }
+    }
+
+    match /chatRooms/{roomId} {
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participants;
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants;
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/chatRooms/$(roomId)).data.participants;
+        allow create: if isAuthenticated() && request.auth.uid == request.resource.data.senderId && 
+                      request.auth.uid in get(/databases/$(database)/documents/chatRooms/$(roomId)).data.participants;
+      }
+    }
+
+    match /mentorshipSessions/{sessionId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.mentorId || request.auth.uid == resource.data.studentId || isAdmin());
+      allow create: if isAuthenticated() && (request.resource.data.studentId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.mentorId || request.auth.uid == resource.data.studentId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /peerReviews/{reviewId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.reviewerId == request.auth.uid;
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.reviewerId || isAdmin());
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.reviewerId || isAdmin());
+    }
+
+    match /progressUpdates/{updateId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidProgressUpdate(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /xpHistory/{historyId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isValidXPHistory(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /portfolioProjects/{projectId} {
+      allow read: if true; // Portfolios are public
+      allow create: if isAuthenticated() && isValidPortfolioProject(request.resource.data);
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isAdmin()) && isValidPortfolioProject(request.resource.data);
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isAdmin());
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidQuiz(request.resource.data);
+      allow update: if isAdmin() && isValidQuiz(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /quizAttempts/{attemptId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isAdmin());
+      allow create: if isAuthenticated() && isValidQuizAttempt(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isMentorOrAdmin());
+      allow create: if isAuthenticated() && isValidSubmission(request.resource.data);
+      allow update: if isMentorOrAdmin() || (isAuthenticated() && request.auth.uid == resource.data.studentId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'submittedAt', 'status']));
+      allow delete: if isAdmin();
+    }
+
+    match /badges/{badgeId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidBadge(request.resource.data);
+      allow update: if isAdmin() && isValidBadge(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /userBadges/{userBadgeId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidUserBadge(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /certificates/{certificateId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidCertificate(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && request.resource.data.role == 'student' && isValidUser(request.resource.data);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && 
+                    (isOwner(userId) && !isAdmin() ? request.resource.data.role == resource.data.role : true) &&
+                    isValidUser(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /users_public/{userId} {
+      allow read: if isAuthenticated() && (
+        isOwner(userId) || 
+        resource.data.visibility == 'public' || 
+        (resource.data.visibility == 'cohort_only' && isSameCohort(resource.data)) ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && isOwner(userId) && isValidPublicProfile(request.resource.data);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidPublicProfile(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /articles/{articleId} {
+      allow read: if isAuthenticated() && (resource.data.isPublished == true || isMentorOrAdmin());
+      allow create: if isMentorOrAdmin() && isValidArticle(request.resource.data);
+      allow update: if isMentorOrAdmin() && isValidArticle(request.resource.data);
+      allow delete: if isMentorOrAdmin();
+    }
+
+    match /resources/{resourceId} {
+      allow read: if isAuthenticated();
+      allow create: if isMentorOrAdmin() && isValidResource(request.resource.data);
+      allow update: if isMentorOrAdmin() && isValidResource(request.resource.data);
+      allow delete: if isMentorOrAdmin();
+    }
+
+    match /jobs/{jobId} {
+      allow read: if isAuthenticated();
+      allow create: if isMentorOrAdmin() && isValidJob(request.resource.data);
+      allow update: if isMentorOrAdmin() && isValidJob(request.resource.data);
+      allow delete: if isMentorOrAdmin();
+    }
+
+    match /careerResources/{resourceId} {
+      allow read: if isAuthenticated();
+      allow create: if isMentorOrAdmin() && isValidCareerResource(request.resource.data);
+      allow update: if isMentorOrAdmin() && isValidCareerResource(request.resource.data);
+      allow delete: if isMentorOrAdmin();
+    }
+
+    match /cohorts/{cohortId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidCohort(request.resource.data);
+      allow update: if isMentorOrAdmin() && isValidCohort(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /courses/{courseId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidCourse(request.resource.data);
+      allow update: if isAdmin() && isValidCourse(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /modules/{moduleId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidModule(request.resource.data);
+      allow update: if isAdmin() && isValidModule(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /lessons/{lessonId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidLesson(request.resource.data);
+      allow update: if isAdmin() && isValidLesson(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}

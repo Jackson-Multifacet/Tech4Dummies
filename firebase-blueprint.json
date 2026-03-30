@@ -1,0 +1,478 @@
+{
+  "entities": {
+    "Assignment": {
+      "title": "Assignment",
+      "description": "An assignment for a course.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "courseId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "dueDate": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "title", "description", "dueDate", "createdAt"]
+    },
+    "CodePersistence": {
+      "title": "CodePersistence",
+      "description": "User code persistence.",
+      "type": "object",
+      "properties": {
+        "files": { "type": "array" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["files", "updatedAt"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "An announcement for students.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "readBy": { "type": "array" }
+      },
+      "required": ["id", "title", "content", "createdAt", "authorId"]
+    },
+    "ForumThread": {
+      "title": "ForumThread",
+      "description": "A forum discussion thread.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "repliesCount": { "type": "number" }
+      },
+      "required": ["id", "title", "content", "createdAt", "authorId"]
+    },
+    "ForumReply": {
+      "title": "ForumReply",
+      "description": "A reply to a forum thread.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "threadId": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" }
+      },
+      "required": ["id", "threadId", "content", "createdAt", "authorId"]
+    },
+    "ChatRoom": {
+      "title": "ChatRoom",
+      "description": "A private chat room between two users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "participants": { "type": "array" },
+        "lastMessage": { "type": "string" },
+        "lastMessageAt": { "type": "number" }
+      },
+      "required": ["id", "participants"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A message in a chat room.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "senderId", "content", "createdAt"]
+    },
+    "MentorshipSession": {
+      "title": "MentorshipSession",
+      "description": "A scheduled mentorship session.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "mentorId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "startTime": { "type": "number" },
+        "endTime": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled", "completed"] },
+        "topic": { "type": "string" }
+      },
+      "required": ["id", "mentorId", "studentId", "startTime", "endTime", "status"]
+    },
+    "PeerReview": {
+      "title": "PeerReview",
+      "description": "A review of a student's assignment by a peer.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "assignmentId": { "type": "string" },
+        "reviewerId": { "type": "string" },
+        "revieweeId": { "type": "string" },
+        "content": { "type": "string" },
+        "rating": { "type": "number" },
+        "rubric": { "type": "object" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "assignmentId", "reviewerId", "revieweeId", "content", "rating", "createdAt"]
+    },
+    "Quiz": {
+      "title": "Quiz",
+      "description": "A quiz for a course.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "courseId": { "type": "string" },
+        "lessonId": { "type": "string" },
+        "title": { "type": "string" },
+        "questions": { "type": "array" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "title", "questions", "createdAt"]
+    },
+    "QuizAttempt": {
+      "title": "QuizAttempt",
+      "description": "A student's attempt at a quiz.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "quizId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "answers": { "type": "array" },
+        "score": { "type": "number" },
+        "completedAt": { "type": "number" }
+      },
+      "required": ["id", "quizId", "studentId", "answers", "score", "completedAt"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "A student's submission for an assignment.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "assignmentId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "studentPhoto": { "type": "string" },
+        "cohortId": { "type": "string" },
+        "content": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "resubmit"] },
+        "grade": { "type": ["number", "null"] },
+        "feedback": { "type": "string" },
+        "submittedAt": { "type": "number" },
+        "isFeatured": { "type": "boolean" }
+      },
+      "required": ["id", "assignmentId", "studentId", "studentName", "studentPhoto", "cohortId", "content", "status", "submittedAt"]
+    },
+    "Badge": {
+      "title": "Badge",
+      "description": "A digital badge for milestones.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "criteria": { "type": "string" }
+      },
+      "required": ["id", "title", "description", "imageUrl"]
+    },
+    "UserBadge": {
+      "title": "UserBadge",
+      "description": "A badge earned by a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "badgeId": { "type": "string" },
+        "earnedAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "badgeId", "earnedAt"]
+    },
+    "Certificate": {
+      "title": "Certificate",
+      "description": "A certificate earned by a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "issuedAt": { "type": "number" },
+        "certificateUrl": { "type": "string" }
+      },
+      "required": ["id", "userId", "courseId", "issuedAt"]
+    },
+    "ProgressUpdate": {
+      "title": "ProgressUpdate",
+      "description": "A record of a student's progress in the course.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "lessonId": { "type": "string" },
+        "lessonTitle": { "type": "string" },
+        "status": { "type": "string", "enum": ["not-started", "in-progress", "completed"] },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "studentId", "lessonId", "status", "updatedAt"]
+    },
+    "XPHistory": {
+      "title": "XPHistory",
+      "description": "A record of XP earned by a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "reason": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "userId", "amount", "reason", "timestamp"]
+    },
+    "PortfolioProject": {
+      "title": "PortfolioProject",
+      "description": "A project in a student's portfolio.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "projectUrl": { "type": "string" },
+        "githubUrl": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "studentId", "title", "description", "createdAt"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "A job posting.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "company": { "type": "string" },
+        "location": { "type": "string" },
+        "type": { "type": "string", "enum": ["Full-time", "Part-time", "Internship", "Contract"] },
+        "description": { "type": "string" },
+        "requirements": { "type": "array" },
+        "applyUrl": { "type": "string" },
+        "category": { "type": "string" },
+        "postedAt": { "type": "number" },
+        "salary": { "type": "string" },
+        "logoUrl": { "type": "string" }
+      },
+      "required": ["id", "title", "company", "location", "type", "description", "applyUrl", "category", "postedAt"]
+    },
+    "CareerResource": {
+      "title": "CareerResource",
+      "description": "A career growth resource.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["Article", "Video", "Tool", "Template"] },
+        "url": { "type": "string" },
+        "category": { "type": "string" },
+        "postedAt": { "type": "number" }
+      },
+      "required": ["id", "title", "description", "type", "url", "category", "postedAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A private user profile containing PII.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "mentor", "admin"] },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "cohortId": { "type": ["string", "null"] },
+        "bio": { "type": "string" },
+        "githubUrl": { "type": "string" },
+        "linkedinUrl": { "type": "string" },
+        "websiteUrl": { "type": "string" },
+        "skills": { "type": "array" },
+        "location": { "type": "string" },
+        "visibility": { "type": "string", "enum": ["public", "private", "cohort_only"] },
+        "completedLessonIds": { "type": "array" },
+        "bookmarkedLessonIds": { "type": "array" },
+        "xp": { "type": "number" },
+        "level": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["uid", "email", "role", "displayName", "createdAt"]
+    },
+    "PublicProfile": {
+      "title": "PublicProfile",
+      "description": "A public user profile for PII protection.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "mentor", "admin"] },
+        "cohortId": { "type": ["string", "null"] },
+        "bio": { "type": "string" },
+        "githubUrl": { "type": "string" },
+        "linkedinUrl": { "type": "string" },
+        "websiteUrl": { "type": "string" },
+        "skills": { "type": "array" },
+        "location": { "type": "string" },
+        "visibility": { "type": "string", "enum": ["public", "private", "cohort_only"] },
+        "xp": { "type": "number" },
+        "level": { "type": "number" },
+        "completedCount": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["uid", "displayName", "photoURL", "role", "visibility", "xp", "level", "completedCount", "createdAt"]
+    },
+    "Article": {
+      "title": "Article",
+      "description": "A knowledge base article or blog post.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "slug": { "type": "string" },
+        "content": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "category": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "publishedAt": { "type": "number" },
+        "updatedAt": { "type": "number" },
+        "isPublished": { "type": "boolean" },
+        "tags": { "type": "array" },
+        "thumbnailUrl": { "type": "string" }
+      },
+      "required": ["id", "title", "slug", "content", "excerpt", "category", "authorId", "publishedAt", "isPublished"]
+    },
+    "Resource": {
+      "title": "Resource",
+      "description": "A curated external resource.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "url": { "type": "string" },
+        "category": { "type": "string" },
+        "tags": { "type": "array" },
+        "addedBy": { "type": "string" },
+        "addedAt": { "type": "number" },
+        "icon": { "type": "string" }
+      },
+      "required": ["id", "title", "description", "url", "category", "addedBy", "addedAt"]
+    }
+  },
+  "firestore": {
+    "/assignments/{assignmentId}": {
+      "schema": { "$ref": "Assignment" },
+      "description": "Assignments collection."
+    },
+    "/codePersistence/{userId}": {
+      "schema": { "$ref": "CodePersistence" },
+      "description": "User code persistence collection."
+    },
+    "/announcements/{announcementId}": {
+      "schema": { "$ref": "Announcement" },
+      "description": "Announcements collection."
+    },
+    "/forumThreads/{threadId}": {
+      "schema": { "$ref": "ForumThread" },
+      "description": "Forum threads collection."
+    },
+    "/forumThreads/{threadId}/replies/{replyId}": {
+      "schema": { "$ref": "ForumReply" },
+      "description": "Replies to forum threads."
+    },
+    "/chatRooms/{roomId}": {
+      "schema": { "$ref": "ChatRoom" },
+      "description": "Private chat rooms."
+    },
+    "/chatRooms/{roomId}/messages/{messageId}": {
+      "schema": { "$ref": "ChatMessage" },
+      "description": "Messages in a chat room."
+    },
+    "/mentorshipSessions/{sessionId}": {
+      "schema": { "$ref": "MentorshipSession" },
+      "description": "Scheduled mentorship sessions."
+    },
+    "/peerReviews/{reviewId}": {
+      "schema": { "$ref": "PeerReview" },
+      "description": "Peer reviews collection."
+    },
+    "/progressUpdates/{updateId}": {
+      "schema": { "$ref": "ProgressUpdate" },
+      "description": "Student progress updates collection."
+    },
+    "/portfolioProjects/{projectId}": {
+      "schema": { "$ref": "PortfolioProject" },
+      "description": "Student portfolio projects collection."
+    },
+    "/quizzes/{quizId}": {
+      "schema": { "$ref": "Quiz" },
+      "description": "Quizzes collection."
+    },
+    "/quizAttempts/{attemptId}": {
+      "schema": { "$ref": "QuizAttempt" },
+      "description": "Quiz attempts collection."
+    },
+    "/badges/{badgeId}": {
+      "schema": { "$ref": "Badge" },
+      "description": "Badges collection."
+    },
+    "/userBadges/{userBadgeId}": {
+      "schema": { "$ref": "UserBadge" },
+      "description": "User earned badges collection."
+    },
+    "/certificates/{certificateId}": {
+      "schema": { "$ref": "Certificate" },
+      "description": "Certificates collection."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "User" },
+      "description": "Private user profiles collection."
+    },
+    "/users_public/{userId}": {
+      "schema": { "$ref": "PublicProfile" },
+      "description": "Public user profiles collection."
+    },
+    "/articles/{articleId}": {
+      "schema": { "$ref": "Article" },
+      "description": "Knowledge base articles."
+    },
+    "/resources/{resourceId}": {
+      "schema": { "$ref": "Resource" },
+      "description": "Curated resource library."
+    },
+    "/jobs/{jobId}": {
+      "schema": { "$ref": "Job" },
+      "description": "Job postings collection."
+    },
+    "/careerResources/{resourceId}": {
+      "schema": { "$ref": "CareerResource" },
+      "description": "Career growth resources collection."
+    },
+    "/submissions/{submissionId}": {
+      "schema": { "$ref": "Submission" },
+      "description": "Assignment submissions collection."
+    },
+    "/xpHistory/{historyId}": {
+      "schema": { "$ref": "XPHistory" },
+      "description": "User XP history collection."
+    }
+  }
+}

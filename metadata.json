@@ -1,0 +1,5 @@
+{
+  "name": "Tech4Dummies Campus",
+  "description": "A character-first tech academy platform for students, mentors, and admins with cohort-based learning and progress tracking.",
+  "requestFramePermissions": ["microphone"]
+}
